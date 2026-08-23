@@ -80,16 +80,27 @@ function startPythonBackend() {
     let pythonCmd, serverScript, backendCwd;
 
 	if (isPackaged) {
-		const backendDir = path.join(process.resourcesPath, 'backend');
+		let backendDir;
+		if (process.platform === 'win32') {
+			// Windows: 后端在 resources/backend（通过 extraResources）
+			backendDir = path.join(process.resourcesPath, 'backend');
+		} else {
+			// macOS/Linux: 后端在 app.asar.unpacked/backend（通过 files + asarUnpack）
+			backendDir = path.join(process.resourcesPath, 'app.asar.unpacked', 'backend');
+		}
 		const backendExe = process.platform === 'win32' ? 'cyy_backend.exe' : 'cyy_backend';
 		pythonCmd = path.join(backendDir, backendExe);
 		serverScript = null;
 		backendCwd = dataDir || backendDir;
-        if (!fs.existsSync(pythonCmd)) {
-            console.error('错误：找不到内置后端 cyy_backend.exe，请确认打包时已包含 dist/cyy_backend');
-            return;
-        }
-    } else {
+		if (!fs.existsSync(pythonCmd)) {
+			console.error(`错误：找不到后端可执行文件 ${pythonCmd}`);
+			return;
+		}
+		// macOS/Linux 需要执行权限
+		if (process.platform !== 'win32') {
+			try { fs.chmodSync(pythonCmd, 0o755); } catch (e) {}
+		}
+	} else {
         // 开发模式：运行 python server.py
         serverScript = path.join(rootDir, 'server.py');
         backendCwd = rootDir;
