@@ -61,14 +61,14 @@ jobs:
           chmod +x frontend/backend/cyy_backend
 
       # ---------- 修改 package.json 以适配 macOS ----------
-      - name: Patch package.json for macOS
+      - name: Patch package.json for macOS (只构建 ARM64)
         run: |
           cd frontend
-          # 添加 mac 配置，清空 extraResources，使用 files + asarUnpack
-          jq '.build.mac = {
+          # 关键：只构建 arm64，因为后端 PyInstaller 在 macos-latest 上只能编译 ARM64
+          jq '.build.extraResources = [] | .build.mac = {
             "icon": "../gui/icon.icns",
             "extraResources": [],
-            "target": [{"target": "dmg", "arch": ["x64", "arm64"]}]
+            "target": [{"target": "dmg", "arch": ["arm64"]}]
           } | .build.files = (.build.files // []) + ["backend/**/*"] | .build.asarUnpack = ["backend/**/*"]' package.json > package.json.tmp && mv package.json.tmp package.json
           # 打印确认（调试用）
           cat package.json | grep -A 20 '"build"'
