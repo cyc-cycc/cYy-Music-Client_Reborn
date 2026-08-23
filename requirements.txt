@@ -1,6 +1,6 @@
 fastapi>=0.110.0
 uvicorn[standard]>=0.27.0
-musicdl>=3.0.0
+musicdl>=2.13.6
 curl_cffi>=0.5.0
 requests>=2.31.0
 cachetools>=5.3.0
