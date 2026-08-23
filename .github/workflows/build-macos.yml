@@ -1,7 +1,7 @@
 name: Build macOS DMG (Manual)
 
 on:
-  workflow_dispatch:          # 仅手动触发
+  workflow_dispatch:
 
 jobs:
   build-macos:
@@ -12,11 +12,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ---------- Node.js ----------
-      - name: Use Node.js 20
+      # ---------- Node.js 24（GitHub Actions 默认） ----------
+      - name: Use Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -39,7 +39,7 @@ jobs:
           cd frontend
           npm ci
 
-      # ---------- ffmpeg for macOS ----------
+      # ---------- ffmpeg ----------
       - name: Install ffmpeg via Homebrew
         run: |
           brew install ffmpeg
@@ -51,7 +51,7 @@ jobs:
         run: |
           pyinstaller --noconfirm server.spec
 
-      # ---------- 准备后端文件（复制到 frontend/backend） ----------
+      # ---------- 准备后端文件 ----------
       - name: Prepare backend for packaging (macOS)
         run: |
           mkdir -p frontend/backend
@@ -60,17 +60,15 @@ jobs:
           chmod +x frontend/backend/ffmpeg
           chmod +x frontend/backend/cyy_backend
 
-      # ---------- 修改 package.json 以适配 macOS ----------
-      - name: Patch package.json for macOS (只构建 ARM64)
+      # ---------- 修改 package.json 只构建 ARM64 ----------
+      - name: Patch package.json for macOS (ARM64 only)
         run: |
           cd frontend
-          # 关键：只构建 arm64，因为后端 PyInstaller 在 macos-latest 上只能编译 ARM64
           jq '.build.extraResources = [] | .build.mac = {
             "icon": "../gui/icon.icns",
             "extraResources": [],
             "target": [{"target": "dmg", "arch": ["arm64"]}]
           } | .build.files = (.build.files // []) + ["backend/**/*"] | .build.asarUnpack = ["backend/**/*"]' package.json > package.json.tmp && mv package.json.tmp package.json
-          # 打印确认（调试用）
           cat package.json | grep -A 20 '"build"'
 
       # ---------- 构建 Electron DMG ----------
@@ -83,5 +81,5 @@ jobs:
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cYy-Music-macOS-DMG
+          name: cYy-Music-macOS-ARM64-DMG
           path: dist-app/*.dmg
