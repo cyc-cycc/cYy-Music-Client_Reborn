@@ -1,4 +1,4 @@
-name: Build macOS DMG
+name: Build macOS DMG (Manual)
 
 on:
   workflow_dispatch:          # 仅手动触发
@@ -24,7 +24,7 @@ jobs:
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.10'
           cache: 'pip'
           cache-dependency-path: requirements.txt
 
@@ -39,36 +39,39 @@ jobs:
           cd frontend
           npm ci
 
-      # ---------- 安装 ffmpeg（macOS） ----------
+      # ---------- ffmpeg for macOS ----------
       - name: Install ffmpeg via Homebrew
         run: |
           brew install ffmpeg
-          # 复制到项目根目录，命名为 ffmpeg_mac（供后续打包使用）
           cp $(which ffmpeg) ./ffmpeg_mac
           chmod +x ./ffmpeg_mac
-
-      # ---------- 动态修改 package.json 以支持 macOS ----------
-      - name: Patch package.json for macOS
-        run: |
-          cd frontend
-          # 使用 jq 添加 mac 构建配置（只构建 DMG）
-          jq '.build.mac = {
-            "icon": "../gui/icon.icns",
-            "extraResources": [
-              {"from": "../dist/cyy_backend", "to": "backend"},
-              {"from": "../ffmpeg_mac", "to": "backend/ffmpeg"}
-            ],
-            "target": [
-              {"target": "dmg", "arch": ["x64", "arm64"]}
-            ]
-          }' package.json > package.json.tmp && mv package.json.tmp package.json
-          # 打印确认（调试用）
-          cat package.json | grep -A 15 '"mac"'
 
       # ---------- 构建 Python 后端 ----------
       - name: Build backend with PyInstaller
         run: |
           pyinstaller --noconfirm server.spec
+
+      # ---------- 准备后端文件（复制到 frontend/backend） ----------
+      - name: Prepare backend for packaging (macOS)
+        run: |
+          mkdir -p frontend/backend
+          cp -r dist/cyy_backend/* frontend/backend/
+          cp ffmpeg_mac frontend/backend/ffmpeg
+          chmod +x frontend/backend/ffmpeg
+          chmod +x frontend/backend/cyy_backend
+
+      # ---------- 修改 package.json 以适配 macOS ----------
+      - name: Patch package.json for macOS
+        run: |
+          cd frontend
+          # 添加 mac 配置，清空 extraResources，使用 files + asarUnpack
+          jq '.build.mac = {
+            "icon": "../gui/icon.icns",
+            "extraResources": [],
+            "target": [{"target": "dmg", "arch": ["x64", "arm64"]}]
+          } | .build.files = (.build.files // []) + ["backend/**/*"] | .build.asarUnpack = ["backend/**/*"]' package.json > package.json.tmp && mv package.json.tmp package.json
+          # 打印确认（调试用）
+          cat package.json | grep -A 20 '"build"'
 
       # ---------- 构建 Electron DMG ----------
       - name: Build Electron DMG
@@ -81,4 +84,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cYy-Music-macOS-DMG
-          path: dist-app/*.dmg      # 对应 package.json 中 directories.output
+          path: dist-app/*.dmg
