@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cYy Music Client</title>
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // 预加载主题（避免闪烁）
+    (function() {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        let dataDir = process.env.CMC_DATA_DIR;
+        if (!dataDir) {
+          if (process.env.PORTABLE_EXECUTABLE_DIR) {
+            dataDir = process.env.PORTABLE_EXECUTABLE_DIR;
+          } else {
+            dataDir = path.join(__dirname, '..');
+          }
+        }
+        const configPath = path.join(dataDir, '.CMC', 'config.json');
+        let theme = 'light';
+        let primaryColor = '#38BDF8'; // 默认天蓝
+        let bgAlpha = '1.0';
+        const THEME_ACCENTS = {
+          sky: '#38BDF8',    // 天蓝
+          pink: '#E83E8C',
+          yellow: '#F5A623',
+          black: '#0F1419',
+          white: '#F5F7FA',
+        };
+        if (fs.existsSync(configPath)) {
+          const content = fs.readFileSync(configPath, 'utf-8');
+          const config = JSON.parse(content);
+          if (config.theme) theme = config.theme;
+          const themeColor = config.theme_color || 'sky';
+          const themeCustom = config.theme_custom || '';
+          if (themeColor === 'custom' && /^#[0-9a-f]{6}$/i.test(themeCustom)) {
+            primaryColor = themeCustom;
+          } else if (THEME_ACCENTS[themeColor]) {
+            primaryColor = THEME_ACCENTS[themeColor];
+          }
+          if (config.background_opacity !== undefined) {
+            const raw = parseFloat(config.background_opacity);
+            if (!isNaN(raw)) bgAlpha = Math.max(0.5, Math.min(1.0, raw)).toFixed(2);
+          }
+        }
+        const root = document.documentElement;
+        root.dataset.theme = theme;
+        root.style.setProperty('--primary', primaryColor);
+        root.style.setProperty('--bg-alpha', bgAlpha);
+      } catch (e) { /* 默认值 */ }
+      // 通知主进程显示窗口
+      try {
+        const { ipcRenderer } = require('electron');
+        setImmediate(() => ipcRenderer.send('window-ready-to-show'));
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <!-- SVG 图标精灵（与之前相同，省略以节省篇幅，实际使用不变） -->
+  <svg width="0" height="0" style="position:absolute;" aria-hidden="true">
+    <defs>
+      <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5v14"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+      <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="m7 4 13 8-13 8V4z"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4h3.5v16H7zM13.5 4H17v16h-3.5z"/></symbol>
+      <symbol id="i-prev" viewBox="0 0 24 24" fill="currentColor"><path d="M19 20 9 12l10-8v16zM5 19V5h3v14z"/></symbol>
+      <symbol id="i-next" viewBox="0 0 24 24" fill="currentColor"><path d="m5 4 10 8-10 8V4zM16 5h3v14h-3z"/></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+      <symbol id="i-eq" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 21V10M5 6V3M10 21v-6M10 11V3M15 21V8M15 4V3M20 21v-4M20 13V3"/><path d="M3 10h4M8 11h4M13 8h4M18 13h4"/></symbol>
+      <symbol id="i-volume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></symbol>
+      <symbol id="i-music" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+      <symbol id="i-min" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></symbol>
+      <symbol id="i-max" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+      <symbol id="i-restore" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/></symbol>
+      <symbol id="i-viz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+    </defs>
+  </svg>
+
+  <!-- 标题栏 -->
+  <header id="title-bar">
+    <span class="app-title">cYy Music</span>
+    <div class="window-controls">
+      <button class="win-btn" id="btn-min"><svg class="ic"><use href="#i-min"/></svg></button>
+      <button class="win-btn" id="btn-max"><svg class="ic"><use href="#i-max"/></svg></button>
+      <button class="win-btn" id="btn-close"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+  </header>
+
+  <!-- 主体 -->
+  <div id="app-body">
+    <!-- 侧边栏 -->
+    <aside id="sidebar">
+      <div class="logo">A great Day starts with Music</div>
+      <nav>
+        <a class="nav-item active" data-view="search"><svg class="ic"><use href="#i-search"/></svg> 搜索</a>
+        <a class="nav-item" data-view="playlist"><svg class="ic"><use href="#i-list"/></svg> 我的歌单</a>
+        <a class="nav-item" data-view="downloads"><svg class="ic"><use href="#i-download"/></svg> 下载管理</a>
+        <a class="nav-item" id="nav-settings"><svg class="ic"><use href="#i-settings"/></svg> 设置</a>
+        <a class="nav-item" id="nav-about"><svg class="ic"><use href="#i-info"/></svg> 关于</a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="sidebar-stats">就绪</span>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main id="main-content">
+      <!-- 搜索视图 -->
+      <section id="view-search" class="view active">
+        <div class="view-header">
+          <h1>搜索音乐</h1>
+          <div class="search-bar">
+            <input id="search-input" placeholder="输入歌曲名、歌手..." />
+            <button id="search-btn" class="btn-primary"><svg class="ic"><use href="#i-search"/></svg> 搜索</button>
+          </div>
+          <div class="parse-area">
+            <input id="playlist-url-input" placeholder="歌单链接" />
+            <select id="playlist-source-select"></select>
+            <button id="parse-playlist-btn" class="btn-secondary"><svg class="ic"><use href="#i-folder"/></svg> 解析</button>
+          </div>
+        </div>
+        <div class="view-actions">
+          <button id="download-selected-btn" class="btn-orange"><svg class="ic"><use href="#i-download"/></svg> 下载选中</button>
+          <button id="add-to-playlist-btn" class="btn-accent"><svg class="ic"><use href="#i-plus"/></svg> 添加到歌单</button>
+          <button id="clear-results-btn" class="btn-ghost"><svg class="ic"><use href="#i-trash"/></svg> 清空结果</button>
+          <button id="cancel-all-btn" class="btn-danger"><svg class="ic"><use href="#i-x"/></svg> 取消下载</button>
+        </div>
+        <!-- 搜索/解析进度（musicdl 进度输出实时显示） -->
+        <div id="search-progress" class="search-progress" style="display:none;"></div>
+        <div class="view-body split">
+          <div id="result-list" class="list-panel"></div>
+          <div id="lyric-content" class="lyric-panel"><div class="lyric-empty">暂无歌词</div></div>
+        </div>
+      </section>
+
+      <!-- 歌单视图 -->
+      <section id="view-playlist" class="view">
+        <div class="view-header">
+          <h1>我的歌单 <span id="playlist-count">0</span></h1>
+          <div class="playlist-tools">
+            <button id="btn-save-playlist" class="mini-btn" title="保存歌单"><svg class="ic"><use href="#i-save"/></svg></button>
+            <button id="btn-load-playlist" class="mini-btn" title="加载歌单"><svg class="ic"><use href="#i-folder"/></svg></button>
+            <button id="btn-clear-playlist" class="mini-btn" title="清空歌单"><svg class="ic"><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+        <div id="playlist-content" class="playlist-full"><div class="empty-tip">列表为空</div></div>
+      </section>
+
+      <!-- 下载视图 -->
+      <section id="view-downloads" class="view">
+        <div class="view-header"><h1>下载管理</h1></div>
+        <div id="download-area" class="download-full">
+          <div id="download-tasks-list"></div>
+          <div class="total-progress">
+            <span>总进度</span>
+            <div class="progress-track"><div id="bar-overall" style="width:0%"></div></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 底部播放条 -->
+  <footer id="player-bar">
+    <div class="now-playing">
+      <div id="player-cover" class="cover"><svg class="ic"><use href="#i-music"/></svg></div>
+      <div id="now-playing-text">未播放</div>
+    </div>
+    <div class="progress-area">
+      <canvas id="mini-spectrum" width="600" height="26"></canvas>
+      <div class="slider-row">
+        <input type="range" id="position-slider" min="0" max="0" step="0.1" />
+        <span id="label-time">00:00 / 00:00</span>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="player-ctrl" id="btn-prev" title="上一首"><svg class="ic"><use href="#i-prev"/></svg></button>
+      <button class="player-ctrl" id="btn-play" title="播放/暂停"><svg class="ic"><use href="#i-play"/></svg></button>
+      <button class="player-ctrl" id="btn-next" title="下一首"><svg class="ic"><use href="#i-next"/></svg></button>
+      <button class="player-ctrl" id="btn-stop" title="停止"><svg class="ic"><use href="#i-stop"/></svg></button>
+      <div class="volume">
+        <svg class="ic"><use href="#i-volume"/></svg>
+        <input type="range" id="volume-slider" min="0" max="100" value="60" />
+      </div>
+      <select id="playmode-select">
+        <option value="0">单曲循环</option>
+        <option value="1">单曲暂停</option>
+        <option value="2" selected>列表循环</option>
+        <option value="3">列表暂停</option>
+      </select>
+      <button class="player-ctrl eq" id="btn-eq" title="均衡器"><svg class="ic"><use href="#i-eq"/></svg></button>
+      <button class="player-ctrl viz" id="btn-viz" title="可视化"><svg class="ic"><use href="#i-viz"/></svg></button>
+    </div>
+    <div id="label-codec" class="codec-badge">MP3</div>
+  </footer>
+
+  <audio id="audio-player" preload="auto" style="display:none;"></audio>
+
+  <!-- 设置弹窗 -->
+  <div class="modal-mask" id="settings-modal">
+    <div class="modal-box settings-box">
+      <div class="modal-header">
+        <h2>设置</h2>
+        <button class="modal-close" id="settings-close-btn"><svg class="ic"><use href="#i-x"/></svg></button>
+      </div>
+      <form id="settings-form">
+        <div class="settings-layout">
+          <div class="settings-nav">
+            <button type="button" class="settings-tab active" data-tab="tab-sources">搜索源</button>
+            <button type="button" class="settings-tab" data-tab="tab-download">下载</button>
+            <button type="button" class="settings-tab" data-tab="tab-appearance">外观</button>
+            <button type="button" class="settings-tab" data-tab="tab-playback">播放</button>
+          </div>
+          <div class="settings-content">
+            <div class="tab-page active" id="tab-sources">
+              <div class="form-group">
+                <label>搜索源（可多选）</label>
+                <div class="source-checkboxes" id="source-checkboxes"></div>
+              </div>
+              <div class="row-flex">
+                <div class="form-group">
+                  <label>每源搜索条数</label>
+                  <input type="number" id="setting-limit" min="1" max="50" value="10" />
+                </div>
+                <div class="form-group">
+                  <label>去重</label>
+                  <label class="inline-checkbox"><input type="checkbox" id="setting-dedup" /> 按歌曲名+歌手去重</label>
+                </div>
+              </div>
+            </div>
+            <div class="tab-page" id="tab-download">
+              <div class="form-group">
+                <label>下载保存路径</label>
+                <div class="path-row">
+                  <input type="text" id="setting-save-dir" />
+                  <button type="button" id="browse-save-dir">浏览</button>
+                </div>
+              </div>
+              <div class="row-flex">
+                <div class="form-group">
+                  <label>文件名格式</label>
+                  <select id="setting-filename-format"></select>
+                </div>
+                <div class="form-group" id="custom-format-group" style="display:none;">
+                  <label>自定义格式</label>
+                  <input type="text" id="setting-custom-format" placeholder="{歌手}-{歌曲名}" />
+                </div>
+                <div class="form-group">
+                  <label>分组方式</label>
+                  <select id="setting-group-by"></select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>下载选项</label>
+                <div>
+                  <label class="inline-checkbox"><input type="checkbox" id="setting-download-lyric" checked /> 下载歌词</label>
+                  <label class="inline-checkbox"><input type="checkbox" id="setting-download-cover" checked /> 下载封面</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label><input type="checkbox" id="setting-convert-enabled" /> 下载后转换格式</label>
+                <div class="row-flex" style="margin-top:6px;">
+                  <select id="setting-convert-format">
+                    <option value="mp3">MP3</option>
+                    <option value="aac">AAC</option>
+                    <option value="ogg">OGG</option>
+                    <option value="flac">FLAC</option>
+                  </select>
+                  <select id="setting-convert-bitrate"></select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>歌词嵌入</label>
+                <div>
+                  <label class="inline-checkbox"><input type="checkbox" id="setting-embed-lyrics" /> 嵌入歌词</label>
+                  <label class="inline-checkbox"><input type="checkbox" id="setting-delete-lyrics" /> 嵌入后删除 .lrc</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>封面嵌入</label>
+                <div>
+                  <label class="inline-checkbox"><input type="checkbox" id="setting-embed-cover" /> 嵌入封面</label>
+                  <label class="inline-checkbox"><input type="checkbox" id="setting-delete-cover" /> 嵌入后删除图片</label>
+                </div>
+              </div>
+            </div>
+            <div class="tab-page" id="tab-appearance">
+              <div class="row-flex">
+                <div class="form-group">
+                  <label>颜色主题</label>
+                  <select id="setting-theme"></select>
+                </div>
+                <div class="form-group">
+                  <label>主题色</label>
+                  <div class="row-flex">
+                    <select id="setting-accent">
+                      <option value="sky">天蓝</option>
+                      <option value="pink">淡粉</option>
+                      <option value="yellow">淡黄</option>
+                      <option value="black">黑色</option>
+                      <option value="white">白色</option>
+                      <option value="custom">自定义</option>
+                    </select>
+                    <input type="color" id="setting-accent-color" value="#38BDF8" style="display:none; width:36px; height:32px; border:1px solid var(--color-border); border-radius:6px;" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>窗口透明度</label>
+                  <div class="range-with-label">
+                    <input type="range" id="setting-opacity" min="50" max="100" value="100" />
+                    <span id="setting-opacity-label">100%</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>详细进度</label>
+                  <div>
+                    <label class="inline-checkbox"><input type="checkbox" id="setting-show-progress" checked /> 显示搜索/解析详细进度（关闭则恢复正常控制台输出）</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tab-page" id="tab-playback">
+              <div class="form-group">
+                <label>播放模式</label>
+                <select id="setting-playmode">
+                  <option value="0">单曲循环</option>
+                  <option value="1">单曲暂停</option>
+                  <option value="2" selected>列表循环</option>
+                  <option value="3">列表暂停</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="cancel-btn" id="settings-cancel-btn">取消</button>
+          <button type="submit" class="save-btn">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 均衡器弹窗 -->
+  <div class="modal-mask" id="eq-modal">
+    <div class="modal-box eq-box">
+      <div class="modal-header">
+        <h2>均衡器</h2>
+        <button class="modal-close" id="eq-close-btn"><svg class="ic"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="eq-top">
+        <select id="eq-preset">
+          <option value="flat">平直</option>
+          <option value="pop">流行</option>
+          <option value="rock">摇滚</option>
+          <option value="jazz">爵士</option>
+          <option value="classical">古典</option>
+          <option value="vocal">人声</option>
+          <option value="bass">重低音</option>
+          <option value="custom">自定义</option>
+        </select>
+        <button type="button" class="btn-ghost" id="eq-reset">重置</button>
+      </div>
+      <div class="eq-bands" id="eq-bands"></div>
+      <div class="eq-effects">
+        <button type="button" class="eq-chip" id="eq-chip-bass">低音增强</button>
+        <button type="button" class="eq-chip" id="eq-chip-treble">高音增强</button>
+        <button type="button" class="eq-chip" id="eq-chip-vocal">人声增强</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="cancel-btn" id="eq-done-btn">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 关于弹窗 -->
+  <div class="modal-mask" id="about-modal">
+    <div class="modal-box" style="width:400px;">
+      <div class="modal-header">
+        <h2>关于 cYy Music</h2>
+        <button class="modal-close" id="about-close-btn"><svg class="ic"><use href="#i-x"/></svg></button>
+      </div>
+      <div style="line-height:2.0; font-size:14px; color:var(--color-text-secondary);">
+        基于 FastAPI + musicdl + Electron<br />
+        版本 5.2.0<br />
+        本程序遵循 GNU 3.0 开源协议<br />
+        © 2026 cYy
+      </div>
+    </div>
+  </div>
+
+  <!-- 可视化覆盖层 -->
+  <div id="viz-overlay">
+    <div id="viz-cover"></div>
+    <div id="viz-title-bar">
+      <span class="vtitle" id="viz-title">音频可视化</span>
+      <button class="title-btn" id="viz-min"><svg class="ic"><use href="#i-min"/></svg></button>
+      <button class="title-btn" id="viz-max"><svg class="ic"><use href="#i-max"/></svg></button>
+      <button class="title-btn" id="viz-close"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div id="viz-main">
+      <div id="viz-left">
+        <div id="viz-lyrics"><div class="lyric-empty">暂无歌词</div></div>
+        <canvas id="viz-bars-canvas"></canvas>
+      </div>
+      <div id="viz-right">
+        <canvas id="viz-ring-canvas"></canvas>
+        <canvas id="viz-waterfall-canvas"></canvas>
+      </div>
+    </div>
+    <div id="viz-controls">
+      <button class="player-ctrl" id="viz-btn-play"><svg class="ic"><use href="#i-play"/></svg></button>
+      <button class="player-ctrl secondary" id="viz-btn-stop"><svg class="ic"><use href="#i-stop"/></svg></button>
+      <div class="progress-col">
+        <input type="range" id="viz-position-slider" min="0" max="0" value="0" step="0.1" />
+      </div>
+      <span id="label-codec-viz" class="codec-badge">MP3</span>
+      <span id="label-time-viz">00:00 / 00:00</span>
+      <div class="volume">
+        <svg class="ic"><use href="#i-volume"/></svg>
+        <input type="range" id="viz-volume-slider" min="0" max="100" value="60" />
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

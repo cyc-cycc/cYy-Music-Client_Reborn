@@ -1,0 +1,77 @@
+{
+  "name": "cYy_music_client-Reborn",
+  "version": "5.2.0",
+  "description": "cYy Music Client - HTML 前端 + FastAPI 后端",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win",
+    "dist:portable": "electron-builder --win portable",
+    "dist:nsis": "electron-builder --win nsis",
+    "dist:dir": "electron-builder --win dir"
+  },
+  "keywords": [],
+  "author": "cYy",
+  "license": "GPL-3.0",
+  "type": "commonjs",
+  "build": {
+    "appId": "com.cyy.musicclient",
+    "productName": "cYy Music Client",
+    "asar": true,
+    "files": [
+      "main.js",
+      "index.html",
+      "renderer.js",
+      "style.css",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../dist/cyy_backend",
+        "to": "backend"
+      },
+      {
+        "from": "../ffmpeg.exe",
+        "to": "backend/ffmpeg.exe"
+      }
+    ],
+    "electronDownload": {
+      "mirror": "https://npmmirror.com/mirrors/electron/"
+    },
+    "win": {
+      "icon": "../gui/icon_256.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
+    },
+    "portable": {
+      "artifactName": "cYy-Music-Client-${version}-portable.exe"
+    },
+    "directories": {
+      "output": "../dist-app"
+    }
+  },
+  "devDependencies": {
+    "electron": "^43.4.0",
+    "electron-builder": "^26.0.12"
+  },
+  "dependencies": {
+    "@electron/remote": "^2.0.1"
+  }
+}
