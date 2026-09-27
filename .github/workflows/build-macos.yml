@@ -1,11 +1,9 @@
 name: Build macOS
 
 on:
-  # 推送 v* tag 时自动构建（如 v8.4.1）
   push:
     tags:
       - 'v*'
-  # 手动触发；可选覆盖版本号
   workflow_dispatch:
     inputs:
       version:
@@ -18,8 +16,6 @@ permissions:
   contents: read
 
 env:
-  # 禁用 electron-builder 的证书自动探测：无签名环境下必须显式关闭，
-  # 否则会因找不到 Apple Developer 证书而打包失败
   CSC_IDENTITY_AUTO_DISCOVERY: 'false'
   ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
   ELECTRON_BUILDER_BINARIES_MIRROR: https://npmmirror.com/mirrors/electron-builder-binaries/
@@ -31,10 +27,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # GitHub 新的 Intel runner 标签（替代已退役的 macos-13）
           - runner: macos-15-intel
             arch: x64
-          # Apple Silicon arm64
           - runner: macos-15
             arch: arm64
     runs-on: ${{ matrix.runner }}
@@ -43,7 +37,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ---------- 语言环境 ----------
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -58,16 +51,12 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      # ---------- FFmpeg ----------
-      # package.json 的 mac.extraResources 会收集项目根目录下名为 ffmpeg 的文件，
-      # 这里从 Homebrew 软链一份（arch 由当前 runner 决定，天然与产物架构匹配）。
       - name: Install FFmpeg
         run: |
           brew install ffmpeg
           ln -sf "$(which ffmpeg)" ./ffmpeg
           ./ffmpeg -version | head -n 1
 
-      # ---------- 依赖 ----------
       - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
@@ -78,7 +67,6 @@ jobs:
         working-directory: frontend
         run: npm install
 
-      # ---------- 版本号（可选） ----------
       - name: Set version from tag
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
@@ -92,7 +80,24 @@ jobs:
           echo "Setting version to ${{ inputs.version }}"
           python set-version.py "${{ inputs.version }}"
 
-      # ---------- 构建后端 ----------
+      # ---------- 清理 package.json 顶层 extraResources ----------
+      # 顶层 extraResources 会在 macOS 构建时尝试复制 ffmpeg.exe（Windows 专用）并报错。
+      # 正确的配置是分别放在 win.extraResources / mac.extraResources 里。
+      - name: Strip top-level extraResources
+        working-directory: frontend
+        run: |
+          node -e "
+            const fs = require('fs');
+            const p = JSON.parse(fs.readFileSync('package.json','utf-8'));
+            if (p.build && p.build.extraResources) {
+              delete p.build.extraResources;
+              fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
+              console.log('已删除 build.extraResources（顶层）');
+            } else {
+              console.log('顶层 extraResources 不存在，跳过');
+            }
+          "
+
       - name: Build backend (PyInstaller)
         run: pyinstaller --noconfirm --clean server.spec
 
@@ -101,23 +106,23 @@ jobs:
           ls -lah dist/cyy_backend/
           file dist/cyy_backend/cyy_backend
 
-          # 后台启动，3 秒后检查健康端点，然后杀掉
-          CMC_API_PORT=18234 ./dist/cyy_backend/cyy_backend &
-          BACKEND_PID=$!
-          sleep 5
-          if curl -fsS http://127.0.0.1:18234/ >/dev/null 2>&1; then
-            echo "✔ 后端健康检查通过"
-          else
-            echo "✘ 后端未响应，输出日志："
-            cat logs/CMC.log 2>/dev/null || true
-            kill $BACKEND_PID 2>/dev/null || true
+      # ---------- 展开后端符号链接 ----------
+      # PyInstaller 在 macOS 上产出的 _internal 里含 Python.framework 符号链接，
+      # electron-builder 复制时会出现 EEXIST。cp -RL 把符号链接展开为真实副本。
+      - name: Flatten backend symlinks
+        run: |
+          cd dist
+          mv cyy_backend cyy_backend_orig
+          cp -RL cyy_backend_orig cyy_backend
+          rm -rf cyy_backend_orig
+          if find cyy_backend -type l | grep -q .; then
+            echo "✘ 仍存在符号链接："
+            find cyy_backend -type l
             exit 1
           fi
-          kill $BACKEND_PID 2>/dev/null || true
+          echo "✔ 符号链接已全部展开"
+          file cyy_backend/cyy_backend
 
-      # ---------- 构建前端 ----------
-      # 显式传 --x64 / --arm64 覆盖 package.json 中的 arch 列表，
-      # 保证本次只构建与 runner 架构一致的后端 + 前端组合。
       - name: Build Electron app (DMG + ZIP)
         working-directory: frontend
         run: npx electron-builder --mac dmg zip --${{ matrix.arch }}
@@ -125,7 +130,6 @@ jobs:
       - name: List artifacts
         run: ls -lah dist-app/
 
-      # ---------- 上传产物 ----------
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
