@@ -1,33 +1,73 @@
-name: Build macOS DMG (Manual)
+name: Build macOS
 
 on:
+  # 推送 v* tag 时自动构建（如 v8.4.1）
+  push:
+    tags:
+      - 'v*'
+  # 手动触发；可选覆盖版本号
   workflow_dispatch:
+    inputs:
+      version:
+        description: '可选：覆盖版本号（如 8.4.1），留空则沿用 package.json'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  # 禁用 electron-builder 的证书自动探测：无签名环境下必须显式关闭，
+  # 否则会因找不到 Apple Developer 证书而打包失败
+  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+  ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
+  ELECTRON_BUILDER_BINARIES_MIRROR: https://npmmirror.com/mirrors/electron-builder-binaries/
 
 jobs:
-  build-macos:
-    name: Build macOS DMG
-    runs-on: macos-latest
+  build:
+    name: macOS ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macos-13 是 Intel x64 runner
+          - runner: macos-13
+            arch: x64
+          # macos-14 是 Apple Silicon arm64 runner
+          - runner: macos-14
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # ---------- Node.js 24（GitHub Actions 默认） ----------
-      - name: Use Node.js 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      # ---------- Python ----------
-      - name: Set up Python 3.10
+      # ---------- 语言环境 ----------
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: requirements.txt
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      # ---------- FFmpeg ----------
+      # package.json 的 mac.extraResources 会收集项目根目录下名为 ffmpeg 的文件，
+      # 这里从 Homebrew 软链一份（arch 由当前 runner 决定，天然与产物架构匹配）。
+      - name: Install FFmpeg
+        run: |
+          brew install ffmpeg
+          ln -sf "$(which ffmpeg)" ./ffmpeg
+          ./ffmpeg -version | head -n 1
+
+      # ---------- 依赖 ----------
       - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
@@ -35,51 +75,50 @@ jobs:
           pip install pyinstaller
 
       - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm ci
+        working-directory: frontend
+        run: npm install
 
-      # ---------- ffmpeg ----------
-      - name: Install ffmpeg via Homebrew
+      # ---------- 版本号（可选） ----------
+      - name: Set version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          brew install ffmpeg
-          cp $(which ffmpeg) ./ffmpeg_mac
-          chmod +x ./ffmpeg_mac
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "Setting version to $VERSION"
+          python set-version.py "$VERSION"
 
-      # ---------- 构建 Python 后端 ----------
-      - name: Build backend with PyInstaller
+      - name: Set version from input
+        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
         run: |
-          pyinstaller --noconfirm server.spec
+          echo "Setting version to ${{ inputs.version }}"
+          python set-version.py "${{ inputs.version }}"
 
-      # ---------- 准备后端文件 ----------
-      - name: Prepare backend for packaging (macOS)
+      # ---------- 构建后端 ----------
+      - name: Build backend (PyInstaller)
+        run: pyinstaller --noconfirm --clean server.spec
+
+      - name: Verify backend binary
         run: |
-          mkdir -p frontend/backend
-          cp -r dist/cyy_backend/* frontend/backend/
-          cp ffmpeg_mac frontend/backend/ffmpeg
-          chmod +x frontend/backend/ffmpeg
-          chmod +x frontend/backend/cyy_backend
+          ls -lah dist/cyy_backend/
+          file dist/cyy_backend/cyy_backend
+          dist/cyy_backend/cyy_backend --help >/dev/null 2>&1 || echo "(后端启动检查已跳过)"
 
-      # ---------- 修改 package.json 只构建 ARM64 ----------
-      - name: Patch package.json for macOS (ARM64 only)
-        run: |
-          cd frontend
-          jq '.build.extraResources = [] | .build.mac = {
-            "icon": "../gui/icon.icns",
-            "extraResources": [],
-            "target": [{"target": "dmg", "arch": ["arm64"]}]
-          } | .build.files = (.build.files // []) + ["backend/**/*"] | .build.asarUnpack = ["backend/**/*"]' package.json > package.json.tmp && mv package.json.tmp package.json
-          cat package.json | grep -A 20 '"build"'
+      # ---------- 构建前端 ----------
+      # 显式传 --x64 / --arm64 覆盖 package.json 中的 arch 列表，
+      # 保证本次只构建与 runner 架构一致的后端 + 前端组合。
+      - name: Build Electron app (DMG + ZIP)
+        working-directory: frontend
+        run: npx electron-builder --mac dmg zip --${{ matrix.arch }}
 
-      # ---------- 构建 Electron DMG ----------
-      - name: Build Electron DMG
-        run: |
-          cd frontend
-          npx electron-builder --mac
+      - name: List artifacts
+        run: ls -lah dist-app/
 
-      # ---------- 上传 DMG ----------
-      - name: Upload DMG artifact
+      # ---------- 上传产物 ----------
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cYy-Music-macOS-ARM64-DMG
-          path: dist-app/*.dmg
+          name: macos-${{ matrix.arch }}
+          path: |
+            dist-app/*.dmg
+            dist-app/*.zip
+          if-no-files-found: error
+          retention-days: 30
