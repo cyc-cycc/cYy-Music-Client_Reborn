@@ -31,11 +31,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macos-13 是 Intel x64 runner
-          - runner: macos-13
+          # GitHub 新的 Intel runner 标签（替代已退役的 macos-13）
+          - runner: macos-15-intel
             arch: x64
-          # macos-14 是 Apple Silicon arm64 runner
-          - runner: macos-14
+          # Apple Silicon arm64
+          - runner: macos-15
             arch: arm64
     runs-on: ${{ matrix.runner }}
 
@@ -100,7 +100,20 @@ jobs:
         run: |
           ls -lah dist/cyy_backend/
           file dist/cyy_backend/cyy_backend
-          dist/cyy_backend/cyy_backend --help >/dev/null 2>&1 || echo "(后端启动检查已跳过)"
+
+          # 后台启动，3 秒后检查健康端点，然后杀掉
+          CMC_API_PORT=18234 ./dist/cyy_backend/cyy_backend &
+          BACKEND_PID=$!
+          sleep 5
+          if curl -fsS http://127.0.0.1:18234/ >/dev/null 2>&1; then
+            echo "✔ 后端健康检查通过"
+          else
+            echo "✘ 后端未响应，输出日志："
+            cat logs/CMC.log 2>/dev/null || true
+            kill $BACKEND_PID 2>/dev/null || true
+            exit 1
+          fi
+          kill $BACKEND_PID 2>/dev/null || true
 
       # ---------- 构建前端 ----------
       # 显式传 --x64 / --arm64 覆盖 package.json 中的 arch 列表，
