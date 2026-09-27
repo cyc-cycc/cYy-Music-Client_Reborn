@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>迷你播放器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+    :root {
+      --primary: #38BDF8;
+      --bg: #ffffff;
+      --surface: #f8f9fa;
+      --border: #e5e7eb;
+      --text: #1a2b4c;
+      --text-2: #6b7280;
+      --primary-light: color-mix(in srgb, var(--primary) 15%, transparent);
+    }
+    [data-theme="dark"] {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #f0f6fc;
+      --text-2: #8b949e;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      color: var(--text);
+      overflow: hidden;
+    }
+	body {
+		display: flex;
+		flex-direction: column;
+		padding: 0;
+	}
+	/* ---------- 打开 / 关闭动画 ---------- */
+	.mini-root {
+		opacity: 0;
+		transform: scale(0.94);
+	}
+	body.loaded .mini-root {
+		animation: miniOpen 0.22s cubic-bezier(0, 0, 0.2, 1) forwards;
+	}
+	body.closing .mini-root {
+		animation: miniClose 0.18s ease forwards;
+	}
+	@keyframes miniOpen {
+		from { opacity: 0; transform: scale(0.94); }
+		to   { opacity: 1; transform: scale(1); }
+	}
+	@keyframes miniClose {
+		from { opacity: 1; transform: scale(1); }
+		to   { opacity: 0; transform: scale(0.94); }
+	}
+	.mini-root {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		overflow: hidden;
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+	}
+
+    /* 顶部拖动条 */
+    .mini-titlebar {
+      height: 26px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      -webkit-app-region: drag;
+      flex-shrink: 0;
+    }
+    .mini-titlebar .label {
+      flex: 1;
+      font-size: 11px;
+      color: var(--text-2);
+      letter-spacing: 0.5px;
+    }
+    .titlebar-btn {
+      width: 20px;
+      height: 20px;
+      border: none;
+      background: transparent;
+      color: var(--text-2);
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-app-region: no-drag;
+      transition: all 0.15s ease;
+    }
+    .titlebar-btn:hover {
+      background: var(--border);
+      color: var(--text);
+    }
+    #mini-btn-close:hover {
+      background: #e74c3c;
+      color: #fff;
+    }
+
+    /* 主体：封面 + 信息 */
+    .mini-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      min-height: 0;
+    }
+    #mini-cover {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      background-color: var(--surface);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    #mini-cover.no-cover::after {
+      content: '♪';
+      font-size: 28px;
+      color: var(--text-2);
+      opacity: 0.5;
+    }
+    .mini-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #mini-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .progress-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #mini-time {
+      font-size: 11px;
+      color: var(--text-2);
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+    #mini-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+      transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #mini-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      box-shadow: 0 0 8px color-mix(in srgb, var(--primary) 40%, transparent);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #mini-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    /* 底部控制条 */
+    .mini-controls {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 12px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .mini-ctrl {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      color: var(--text-2);
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .mini-ctrl:hover {
+      background: var(--border);
+      color: var(--primary);
+    }
+    .mini-ctrl svg {
+      width: 16px;
+      height: 16px;
+    }
+    #mini-btn-play {
+      width: 34px;
+      height: 34px;
+      background: var(--primary);
+      color: #fff;
+    }
+    #mini-btn-play:hover {
+      opacity: 0.85;
+      transform: scale(1.05);
+      color: #fff;
+    }
+    #mini-btn-play svg {
+      width: 18px;
+      height: 18px;
+    }
+    #mini-btn-desktop-lyric svg {
+      width: 15px;
+      height: 15px;
+    }
+    #mini-btn-desktop-lyric.active {
+      color: var(--primary);
+      background: var(--primary-light);
+    }
+  </style>
+</head>
+<body>
+  <div class="mini-root">
+    <div class="mini-titlebar">
+      <span class="label">cYy Music</span>
+      <button class="titlebar-btn" id="mini-btn-expand" title="展开主窗口">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>
+        </svg>
+      </button>
+      <button class="titlebar-btn" id="mini-btn-close" title="关闭迷你播放器">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="mini-body">
+      <div id="mini-cover" class="no-cover"></div>
+      <div class="mini-info">
+        <div id="mini-title">未播放</div>
+        <div class="progress-row">
+          <span id="mini-time">--:-- / --:--</span>
+        </div>
+        <input type="range" id="mini-slider" min="0" max="0" value="0" step="0.1" />
+      </div>
+    </div>
+
+    <div class="mini-controls">
+      <button class="mini-ctrl" id="mini-btn-prev" title="上一首">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 20 9 12l10-8v16zM5 19V5h3v14z"/></svg>
+      </button>
+      <button class="mini-ctrl" id="mini-btn-play" title="播放/暂停">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="m7 4 13 8-13 8V4z"/></svg>
+      </button>
+      <button class="mini-ctrl" id="mini-btn-next" title="下一首">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="m5 4 10 8-10 8V4zM16 5h3v14h-3z"/></svg>
+      </button>
+      <button class="mini-ctrl" id="mini-btn-desktop-lyric" title="桌面歌词">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 6h13M3 12h13M3 18h8"/>
+          <circle cx="19" cy="15" r="2" fill="currentColor" stroke="none"/>
+          <path d="M21 13V7l-2 1"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script src="mini-renderer.js"></script>
+</body>
+</html>

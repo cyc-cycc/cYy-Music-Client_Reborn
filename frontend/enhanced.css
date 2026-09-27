@@ -1,0 +1,714 @@
+/* ============================================================
+   cYy Music · 视觉增强层（阶段 1）
+   - 玻璃拟态 2.0：边缘光 / 顶部高光 / 主题色透染
+   - 微交互：弹性按钮 / 图标脉动 / 涟漪 / 列表入场
+   - 弹窗三层叠加
+   仅新增与覆盖视觉，不改功能逻辑。
+   删除本文件 + index.html 对应 <link> 即可完全回滚。
+   ============================================================ */
+
+/* ---------- 1. 玻璃拟态 2.0 · 通用卡片材质 ---------- */
+/* 边缘高光/主题色透染：随主题自动变化，避免每个元素写两遍 */
+:root {
+  --edge-highlight: color-mix(in srgb, #ffffff 52%, transparent);
+  --edge-primary:   color-mix(in srgb, var(--primary) 8%, transparent);
+  --edge-shadow:    color-mix(in srgb, var(--primary) 12%, transparent);
+  /* 悬停内边线的透明度系数 */
+  --subtle-edge-alpha: 8%;
+  /* 播放条呼吸光：起点 / 峰值 / 外溢光晕 */
+  --breath-edge-min:  8%;
+  --breath-edge-max:  22%;
+  --breath-glow-max:  12%;
+}
+[data-theme="dark"] {
+  --edge-highlight: color-mix(in srgb, #ffffff 6%, transparent);
+  --edge-primary:   color-mix(in srgb, var(--primary) 16%, transparent);
+  --edge-shadow:    color-mix(in srgb, var(--primary) 18%, transparent);
+  /* 暗色下主色透到深背景对比低，整体拉高 */
+  --subtle-edge-alpha: 24%;
+  --breath-edge-min:  20%;
+  --breath-edge-max:  50%;
+  --breath-glow-max:  30%;
+}
+/* 顶部高光 + 边缘光 + 主题色透染 + 多层阴影 */
+.modal-box,
+.lyric-panel,
+#viz-title-bar,
+#lyrics-overlay-title-bar,
+#viz-controls,
+#lyrics-overlay-controls,
+#player-bar,
+#title-bar,
+#sidebar,
+#viz-playlist-panel {
+  box-shadow:
+    inset 0 1px 0 var(--edge-highlight),
+    inset 0 0 0 1px var(--edge-primary),
+    0 8px 24px var(--edge-shadow);
+  transition:
+    box-shadow 0.4s ease,
+    background 0.4s ease,
+    border-color 0.4s ease;
+}
+
+/* 卡片悬停时微微抬起 + 主题色光晕加强 */
+.modal-box:hover,
+.lyric-panel:hover {
+  box-shadow:
+    inset 0 1px 0 var(--edge-highlight),
+    inset 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent),
+    0 12px 40px color-mix(in srgb, var(--primary) 22%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* 歌单/聆听/下载容器：悬停时给主题色内边线，弱到只在焦点下才显形 */
+.playlist-full:hover,
+.library-full:hover,
+.download-full:hover {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--primary) var(--subtle-edge-alpha), transparent);
+  border-radius: 10px;
+  transition: box-shadow 0.35s ease, border-radius 0.35s ease;
+}
+
+/* ---------- 补丁：恢复框架元素的入场滑入过渡 ---------- */
+/* 主过渡段只列了 box-shadow / background / border-color，
+   会整体覆盖 style.css 里这三个元素的 opacity / transform 过渡，
+   导致侧边栏、标题栏、播放条瞬间出现、失去依次滑入动画。 */
+#title-bar,
+#player-bar {
+  transition:
+    box-shadow 0.4s ease,
+    background 0.4s ease,
+    border-color 0.4s ease,
+    opacity 0.6s cubic-bezier(0, 0, 0.2, 1),
+    transform 0.6s cubic-bezier(0, 0, 0.2, 1);
+}
+
+#sidebar {
+  transition:
+    box-shadow 0.4s ease,
+    background 0.4s ease,
+    border-color 0.4s ease,
+    opacity 0.8s cubic-bezier(0, 0, 0.2, 1),
+    transform 0.6s cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* ---------- 2. 卡片圆角统一升级 ---------- */
+.modal-box { border-radius: 18px; }
+#viz-title-bar,
+#lyrics-overlay-title-bar,
+#viz-controls,
+#lyrics-overlay-controls { border-radius: 12px; }
+
+/* ---------- 3. 弹窗三层叠加（模糊 + 暗化 + 缩放） ---------- */
+.modal-mask {
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(10px) saturate(1.15);
+  -webkit-backdrop-filter: blur(10px) saturate(1.15);
+  transition: opacity 0.25s ease;
+}
+[data-theme="dark"] .modal-mask {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* 打开动画：仅在"显示且未在关闭中"时生效 */
+.modal-mask.show:not(.closing) .modal-box {
+  animation: popIn 0.34s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* 关闭动画：与 ui.js 的 160ms 延迟对齐，避免末尾闪一下 */
+.modal-mask.closing .modal-box {
+  animation: popOut 0.16s ease forwards;
+}
+
+/* ---------- 4. 弹性按钮（替换默认线性过渡） ---------- */
+.btn-primary,
+.btn-orange,
+.btn-accent,
+.btn-secondary,
+.btn-ghost,
+.btn-danger,
+.player-ctrl,
+.mini-btn,
+.icon-btn,
+.modal-actions button,
+.win-btn,
+.settings-tab,
+.nav-item,
+.playlist-tab {
+  transition: all 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 按钮悬停时轻微上浮 + 主题色描边 */
+.btn-primary:hover,
+.btn-orange:hover,
+.btn-accent:hover,
+.btn-secondary:hover,
+.btn-ghost:hover {
+  box-shadow:
+    0 6px 20px color-mix(in srgb, var(--primary) 30%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent) inset;
+}
+
+/* 主按钮按下时更"陷"一点 */
+.btn-primary:active,
+.btn-orange:active,
+.btn-accent:active,
+.player-ctrl:active,
+.mini-btn:active {
+  transform: scale(0.94);
+  transition-duration: 0.08s;
+}
+
+/* ---------- 5. 图标悬停弹性 ---------- */
+button:hover .ic,
+.nav-item:hover .ic {
+  transform: scale(1.18) rotate(-4deg);
+  transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+button:active .ic,
+.nav-item:active .ic {
+  transform: scale(0.92) rotate(2deg);
+}
+
+/* ---------- 6. 涟漪（JS 注入 .__ripple，见 effects.js） ---------- */
+.__ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  pointer-events: none;
+  transform: scale(0);
+  opacity: 0.42;
+  animation: __rippleExpand 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  mix-blend-mode: overlay;
+}
+@keyframes __rippleExpand {
+  0%   { transform: scale(0);   opacity: 0.5; }
+  60%  { opacity: 0.28; }
+  100% { transform: scale(1);   opacity: 0; }
+}
+
+/* ---------- 7. 列表入场：从左下角弹入 ---------- */
+@keyframes listItemIn {
+  0%   { opacity: 0; transform: translateX(-16px) translateY(6px) scale(0.97); }
+  60%  { opacity: 1; transform: translateX(3px) translateY(-1px) scale(1.005); }
+  100% { opacity: 1; transform: translateX(0) translateY(0) scale(1); }
+}
+.song-item,
+.playlist-item,
+.task-item {
+  opacity: 1;   /* 覆盖 style.css 里 .song-item 的 opacity: 0 */
+  animation: listItemIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* 列表项悬停时主题色描边 */
+.song-item:hover,
+.library-item:hover {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--primary) 28%, transparent),
+    0 4px 16px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+/* ---------- 8. 进度条发光尾迹 ---------- */
+.slider-row input[type="range"],
+.volume input[type="range"],
+#mini-slider {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--primary) 70%, var(--color-border)) 0%,
+    var(--color-border) 100%
+  );
+  position: relative;
+}
+.slider-row input[type="range"]::-webkit-slider-thumb,
+.volume input[type="range"]::-webkit-slider-thumb,
+#mini-slider::-webkit-slider-thumb {
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--primary) 70%, transparent),
+    0 0 24px color-mix(in srgb, var(--primary) 45%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent);
+  transition: box-shadow 0.3s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.slider-row input[type="range"]:hover::-webkit-slider-thumb,
+.volume input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.25);
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--primary) 85%, transparent),
+    0 0 32px color-mix(in srgb, var(--primary) 60%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+/* ---------- 10. 侧边栏导航项主题色光条动画 ---------- */
+#sidebar .nav-item::after {
+  transition: height 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.3s ease;
+}
+#sidebar .nav-item.active::after {
+  height: 70%;
+  box-shadow: 0 0 12px var(--primary);
+}
+#sidebar .nav-item:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+/* ---------- 11. 搜索框聚焦时的主题色光晕 ---------- */
+.search-bar input:focus,
+.parse-area input:focus,
+.form-group input:focus,
+.form-group select:focus {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent),
+    0 0 20px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+/* ---------- 12. 播放条播放时的柔和呼吸光 ---------- */
+@keyframes playerBarBreath {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--primary) var(--breath-edge-min), transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--primary) var(--breath-edge-max), transparent),
+      0 0 32px color-mix(in srgb, var(--primary) var(--breath-glow-max), transparent);
+  }
+}
+#player-bar.playing {
+  animation: playerBarBreath 3.2s ease-in-out infinite;
+}
+
+/* ---------- 13. 播放按钮播放时的脉冲强化 ---------- */
+#btn-play.playing {
+  animation: playBtnPulse 1.6s ease-in-out infinite;
+}
+@keyframes playBtnPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 60%, transparent),
+                0 2px 12px var(--primary-light);
+  }
+  70% {
+    box-shadow: 0 0 0 10px transparent,
+                0 2px 12px var(--primary-light);
+  }
+}
+
+/* ---------- 14. 滚动条主题色渐显 ---------- */
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-border) 80%, var(--primary)) 0%,
+    var(--color-border) 100%
+  );
+  transition: background 0.3s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    var(--primary) 0%,
+    color-mix(in srgb, var(--primary) 60%, var(--color-border)) 100%
+  );
+}
+
+/* ---------- 15. 均衡器频段条发光 ---------- */
+.eq-band input[type="range"]::-webkit-slider-thumb {
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--primary) 70%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+.eq-chip.on {
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--primary) 40%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #ffffff 40%, transparent);
+  transform: translateY(-1px);
+}
+
+/* ---------- 16. 全局禁用默认过渡闪烁 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- 17. 标题栏 · 玻璃质感美化 ---------- */
+
+/* 底部一条主题色光带（随低频节奏跳动）
+   --title-bar-beat 由 eq-viz.js 每帧写入，范围 0~1：
+   - 静止 / 暂停：0
+   - 一般节奏峰值：0.6~0.9
+   - 强烈鼓点：接近 1
+   transform / opacity 走合成层；box-shadow 只在光带局部重绘。 */
+#title-bar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--primary) 55%, transparent) 28%,
+    color-mix(in srgb, var(--primary) 85%, transparent) 50%,
+    color-mix(in srgb, var(--primary) 55%, transparent) 72%,
+    transparent 80%
+  );
+  transform-origin: bottom;
+  transform: scaleY(calc(1 + var(--title-bar-beat, 0) * 5));
+  opacity: calc(0.7 + var(--title-bar-beat, 0) * 0.3);
+  box-shadow:
+    0 0 calc(var(--title-bar-beat, 0) * 20px)
+    color-mix(in srgb, var(--primary) 65%, transparent);
+  will-change: transform, opacity;
+}
+
+/* 标题：渐变文字 + 缓慢流动的光泽 */
+#title-bar .app-title {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  background: linear-gradient(
+    120deg,
+    var(--color-text) 0%,
+    color-mix(in srgb, var(--primary) 80%, var(--color-text)) 50%,
+    var(--color-text) 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: titleSheen 9s ease-in-out infinite;
+}
+
+@keyframes titleSheen {
+  0%, 100% { background-position: 0% 0; }
+  50%      { background-position: 100% 0; }
+}
+
+/* 标题左侧的 cYy 音符 logo（替换原圆点） */
+#title-bar .app-title::before {
+  content: none;   /* 关闭原主题色圆点 */
+}
+
+#title-bar .app-logo {
+  width: 17px;
+  height: 17px;
+  margin-right: 7px;
+  vertical-align: -3px;
+  color: var(--primary);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--primary) 55%, transparent));
+  transition: color 0.4s ease, filter 0.4s ease;
+}
+
+/* 窗口按钮：精致化 + 主题色反馈 */
+#title-bar {
+  height: 44px;
+  padding: 0 14px;
+  border-bottom: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--titlebar-bg) 94%, transparent) 0%,
+    color-mix(in srgb, var(--titlebar-bg) 86%, transparent) 55%,
+    color-mix(in srgb, var(--titlebar-bg) 78%, transparent) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 var(--edge-highlight),
+    inset 0 -1px 0 color-mix(in srgb, var(--color-border) 70%, transparent),
+    0 2px 14px var(--edge-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ============================================================
+   悬停闪白 · 终极修复
+   ------------------------------------------------------------
+   根因：hover 时 background-color 变化会触发 Chromium 的
+   compositing layer 重建，首帧显示默认白色。
+   解法：背景色不参与过渡，hover 效果改由 ::before 伪元素承载，
+        只过渡 opacity（compositor 层动画，不触发 repaint）。
+   ============================================================ */
+
+/* ---------- 1. 目标元素统一建立层叠上下文 ---------- */
+#sidebar .nav-item,
+#title-bar .win-btn,
+.settings-tab,
+.playlist-tab,
+.btn-ghost,
+.btn-danger,
+.btn-secondary,
+.btn-accent,
+.player-ctrl,
+.mini-btn,
+.icon-btn,
+.modal-actions .cancel-btn,
+.ctx-item,
+.sleep-item,
+.vpl-item,
+.eq-chip,
+.selection-bar button {
+  position: relative;
+  isolation: isolate;
+  /* 关闭自身的 background-color 过渡，避免 layer 重建 */
+  transition-property: border-color, color, box-shadow, transform;
+  transition-duration: 0.28s;
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ---------- 2. 通用的 ::before 承载 hover 背景 ---------- */
+/* 默认：不显示。每个元素单独指定 hover 色，见下方各段。 */
+#sidebar .nav-item::before,
+#title-bar .win-btn::before,
+.settings-tab::before,
+.playlist-tab::before,
+.btn-ghost::before,
+.btn-danger::before,
+.btn-secondary::before,
+.btn-accent::before,
+.player-ctrl::before,
+.mini-btn::before,
+.icon-btn::before,
+.modal-actions .cancel-btn::before,
+.ctx-item::before,
+.sleep-item::before,
+.vpl-item::before,
+.eq-chip::before,
+.selection-bar button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-color: transparent;   /* 会被各段覆盖 */
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+  transition: opacity 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ---------- 3. 逐个元素指定 hover 色与触发 ---------- */
+
+/* 侧边栏导航项 */
+#sidebar .nav-item::before { background-color: var(--color-border); }
+#sidebar .nav-item:hover::before { opacity: 1; }
+#sidebar .nav-item.active::before { background-color: var(--primary-light); opacity: 1; }
+
+/* 窗口控制按钮 */
+#title-bar .win-btn::before {
+  background-color: color-mix(in srgb, var(--primary) 14%, var(--color-surface));
+}
+#title-bar .win-btn:hover::before { opacity: 1; }
+#title-bar #btn-close::before { background-color: var(--color-danger); }
+#title-bar #btn-close:hover::before { opacity: 1; }
+#title-bar #btn-close:hover { color: #ffffff; }
+
+/* 设置 / 歌单 Tab */
+.settings-tab::before { background-color: var(--color-surface); }
+.settings-tab:hover::before { opacity: 1; }
+.settings-tab.active::before { background-color: var(--primary-light); opacity: 1; }
+
+.playlist-tab::before { background-color: var(--primary); }
+.playlist-tab:hover::before { opacity: 0.12; }
+.playlist-tab.active::before { opacity: 1; }
+
+/* 描边按钮 */
+.btn-ghost::before { background-color: var(--primary-light); }
+.btn-ghost:hover::before { opacity: 1; }
+
+.btn-danger::before { background-color: var(--color-danger); }
+.btn-danger:hover::before { opacity: 1; }
+
+.btn-secondary::before { background-color: var(--primary-light); }
+.btn-secondary:hover::before { opacity: 1; }
+
+.btn-accent::before { background-color: var(--primary); }
+.btn-accent:hover::before { opacity: 1; }
+
+/* 播放控制按钮 */
+.player-ctrl::before { background-color: var(--primary-light); }
+.player-ctrl:hover::before { opacity: 1; }
+
+/* 小图标按钮 */
+.mini-btn::before { background-color: var(--primary-light); }
+.mini-btn:hover::before { opacity: 1; }
+
+.icon-btn::before { background-color: var(--primary-light); }
+.icon-btn:hover::before { opacity: 1; }
+
+/* 弹窗取消按钮 */
+.modal-actions .cancel-btn::before { background-color: var(--primary-light); }
+.modal-actions .cancel-btn:hover::before { opacity: 1; }
+
+/* 右键菜单项 */
+.ctx-item::before { background-color: var(--primary-light); }
+.ctx-item:hover::before { opacity: 1; }
+.ctx-item.danger::before { background-color: rgba(239, 68, 68, 0.12); }
+.ctx-item.danger:hover::before { opacity: 1; }
+
+/* 睡眠菜单项 */
+.sleep-item::before { background-color: var(--primary-light); }
+.sleep-item:hover::before { opacity: 1; }
+
+/* 可视化悬浮歌单项 */
+.vpl-item::before { background-color: var(--primary-light); }
+.vpl-item:hover::before { opacity: 1; }
+.vpl-item.playing::before { opacity: 1; }
+
+/* EQ 芯片 */
+.eq-chip::before { background-color: var(--color-surface); }
+.eq-chip:hover::before { opacity: 1; }
+.eq-chip.on::before { background-color: var(--primary-light); opacity: 1; }
+
+/* 多选栏里的按钮（复用 btn-ghost / btn-secondary 视觉） */
+.selection-bar button::before { background-color: var(--primary-light); }
+.selection-bar button:hover::before { opacity: 1; }
+
+/* ---------- 4. 关掉这些元素自身残留的 hover 背景 ---------- */
+/* 让元素本身的 background-color 始终保持初始值，只由 ::before 承担。 */
+#sidebar .nav-item:hover { background-color: transparent; }
+#sidebar .nav-item.active { background-color: transparent; }
+
+#title-bar .win-btn:hover { background-color: color-mix(in srgb, var(--color-surface) 55%, transparent); }
+#title-bar #btn-close:hover { background-color: color-mix(in srgb, var(--color-surface) 55%, transparent); }
+
+.settings-tab:hover { background-color: transparent; }
+.settings-tab.active { background-color: transparent; }
+
+.playlist-tab:hover { background-color: transparent; }
+.playlist-tab.active { background-color: transparent; }
+
+.btn-ghost:hover { background-color: transparent; }
+.btn-danger:hover { background-color: transparent; }
+.btn-secondary:hover { background-color: transparent; }
+.btn-accent:hover { background-color: transparent; }
+
+.player-ctrl:hover { background-color: transparent; }
+.mini-btn:hover { background-color: transparent; }
+.icon-btn:hover { background-color: transparent; }
+.modal-actions .cancel-btn:hover { background-color: var(--color-surface); }
+
+.ctx-item:hover:not(:disabled) { background-color: transparent; }
+.sleep-item:hover { background-color: transparent; }
+.vpl-item:hover { background-color: transparent; }
+.vpl-item.playing { background-color: transparent; }
+.eq-chip:hover { background-color: transparent; }
+.eq-chip.on { background-color: transparent; }
+.selection-bar button:hover { background-color: transparent; }
+
+/* ============================================================
+   阶段 2：封面驱动动态主题 + 页面转场
+   ============================================================ */
+
+/* ---------- @property：让 --primary 成为可过渡的 <color> ----------
+   声明后，:root 上的 transition 才能对它生效。
+   非 Chromium 内核浏览器会忽略此块，退化为"无过渡直接换色"。 */
+@property --primary {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #38BDF8;
+}
+
+:root {
+  /* 切歌时整站色调柔和渐变；由 dynamic-theme.js 写入 --primary 触发。
+     因为 --primary-light / --edge-* 都是 color-mix(in srgb, var(--primary) ...)，
+     每帧会自动跟随重算，视觉上是一整套颜色在一起呼吸。 */
+  transition: --primary 0.75s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
+   阶段 3：封面视差 3D + 纵深
+   ============================================================ */
+
+/* ---------- 视差封面（JS 挂 .parallax-cover） ----------
+   只动 transform / opacity，走合成层；不重排、不重绘。 */
+.parallax-cover {
+  position: relative;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform;
+  /* transform 由 JS inline 控制；这里只过渡 box-shadow，
+     避免与 rAF 每帧写入 transform 冲突。 */
+  transition: box-shadow 0.35s ease;
+}
+
+/* 覆盖 style.css 的 #player-bar .cover:hover scale（缩放已由 JS 接管） */
+#player-bar .cover:hover {
+  transform: none;
+}
+
+/* ---------- 边缘光晕跟随鼠标 ----------
+   --px / --py ∈ [-1, 1]，由 JS 每次 pointermove 写入；
+   径向渐变的圆心随之移动，形成柔和跟随。 */
+.parallax-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(
+    circle at calc(50% + var(--px, 0) * 55%) calc(50% + var(--py, 0) * 55%),
+    rgba(255, 255, 255, 0.40) 0%,
+    color-mix(in srgb, var(--primary) 50%, transparent) 26%,
+    transparent 62%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.parallax-cover.parallax-active::after {
+  opacity: 1;
+}
+
+/* ---------- 侧栏项悬停浮起 + 纵深 ----------
+   在原 hover 内边线的基础上，叠加轻微上浮 + 投影。
+   transform 走 enhanced.css 前面已声明的 transition-property。 */
+#sidebar .nav-item:hover {
+  transform: translateX(4px) translateY(-1px) scale(1.015);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--primary) 28%, transparent),
+    0 6px 16px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+/* ============================================================
+   播放条标题跑马灯（超出宽度则循环滚动）
+   ============================================================ */
+
+/* 容器限宽 + 裁剪；是否滚动由 JS 加 .npt-scroll 控制 */
+#now-playing-text {
+  max-width: 200px;      /* ← 最大长度，可按喜好调 */
+  overflow: hidden;
+  text-overflow: clip;   /* 覆盖 style.css 的 ellipsis，避免和滚动冲突 */
+}
+
+#now-playing-text .npt-inner {
+  display: inline-block;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+#now-playing-text.npt-scroll .npt-inner {
+  animation: nptMarquee var(--npt-dur, 8s) linear infinite;
+}
+
+/* 播放中：动画暂停在原位置（不移动、不跳回） */
+#now-playing-text.npt-paused .npt-inner {
+  animation-play-state: paused;
+}
+
+@keyframes nptMarquee {
+  /* 左端停 → 滚到右端 → 右端停 → 滚回 → 衔接开头 */
+  0%, 8% {
+    transform: translateX(0);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  45%, 55% {
+    transform: translateX(var(--npt-shift, 0px));
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  92%, 100% {
+    transform: translateX(0);
+  }
+}

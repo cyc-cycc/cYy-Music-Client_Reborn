@@ -5,15 +5,18 @@ from enum import IntEnum
 
 # ==================== 路径常量 ====================
 APP_DIR = os.path.dirname(os.path.abspath(__file__)) if not getattr(sys, 'frozen', False) else os.path.dirname(sys.executable)
-# 打包环境下可用环境变量 CMC_DATA_DIR 覆盖数据目录（配置/日志/下载），
-# 由 Electron 主进程设为可写的 userData 目录，避免写入安装目录失败
+# 数据目录优先级：
+#   1. CMC_DATA_DIR 环境变量（Electron 主进程注入，打包版始终走这条）
+#   2. macOS：~/Documents/CMC（符合 macOS 惯例，避免写入 .app 包内）
+#   3. Windows / Linux：代码目录（APP_DIR）
 _CMC_DATA_DIR = os.environ.get('CMC_DATA_DIR')
 if _CMC_DATA_DIR:
     DATA_DIR = os.path.abspath(_CMC_DATA_DIR)
 elif sys.platform == 'darwin':
-    DATA_DIR = os.path.join(os.path.expanduser("~"), "Documents", "CMC")
+    DATA_DIR = os.path.expanduser('~/Documents/CMC')
 else:
     DATA_DIR = APP_DIR
+
 LOG_DIR = os.path.join(DATA_DIR, 'logs')
 LOG_FILE = os.path.join(LOG_DIR, 'CMC.log')
 DEFAULT_SAVE_DIR = os.path.join(DATA_DIR, 'download')
@@ -124,3 +127,7 @@ ENCRYPTION_PASSWORD = "cYy4_Music3_Client0_playlist_PASSWORD"   # 可由外部�
 
 # ==================== 刷新搜索大小 ====================
 REFRESH_SEARCH_SIZE = 2
+
+# ==================== 缓存 TTL（秒） ====================
+URL_CACHE_TTL = 300          # 刷新后的下载/播放链接缓存时长
+URL_HEAD_CACHE_TTL = 60      # 无签名 URL 的 HEAD 校验结果缓存时长

@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>cYy Music Client</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="enhanced.css">
+</head>
+<body>
   <script>
-    // 预加载主题（避免闪烁）
     (function() {
       try {
         const fs = require('fs');
@@ -21,14 +23,11 @@
         }
         const configPath = path.join(dataDir, '.CMC', 'config.json');
         let theme = 'light';
-        let primaryColor = '#38BDF8'; // 默认天蓝
+        let primaryColor = '#38BDF8';
         let bgAlpha = '1.0';
         const THEME_ACCENTS = {
-          sky: '#38BDF8',    // 天蓝
-          pink: '#E83E8C',
-          yellow: '#F5A623',
-          black: '#0F1419',
-          white: '#F5F7FA',
+          sky: '#38BDF8', pink: '#E83E8C', yellow: '#F5A623',
+          black: '#0F1419', white: '#F5F7FA',
         };
         if (fs.existsSync(configPath)) {
           const content = fs.readFileSync(configPath, 'utf-8');
@@ -51,21 +50,14 @@
         root.style.setProperty('--primary', primaryColor);
         root.style.setProperty('--bg-alpha', bgAlpha);
       } catch (e) { /* 默认值 */ }
-      // 通知主进程显示窗口
-      try {
-        const { ipcRenderer } = require('electron');
-        setImmediate(() => ipcRenderer.send('window-ready-to-show'));
-      } catch (e) {}
     })();
   </script>
-</head>
-<body>
-  <!-- SVG 图标精灵（与之前相同，省略以节省篇幅，实际使用不变） -->
+
   <svg width="0" height="0" style="position:absolute;" aria-hidden="true">
     <defs>
       <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
       <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></symbol>
-      <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="none"/><path d="M12 11v7"/></symbol>
       <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
       <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5v14"/></symbol>
       <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></symbol>
@@ -85,12 +77,25 @@
       <symbol id="i-max" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
       <symbol id="i-restore" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/></symbol>
       <symbol id="i-viz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+      <symbol id="i-hdd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12H2M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><path d="M6 16h.01M10 16h.01"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-9-9 9 9 0 0 1 9-9c2.4 0 4.6.9 6.3 2.5L21 8"/><path d="M21 3v5h-5"/></symbol>
+      <symbol id="i-pip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="12" width="8" height="6" rx="1" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
+
+      <!-- cYy 音符 logo（标题栏用） -->
+      <symbol id="i-cyy-logo" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="1.9"
+              stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12.33 14.17 A 4 4 0 1 0 12.33 19.83"/>
+        <path d="M12.33 14.17 L 12.33 4.8"/>
+        <path d="M12.33 4.8 C 15.5 5.1 17.8 7.3 18 10.6"/>
+        <path d="M12.33 4.8 L 9.8 2.5"/>
+      </symbol>
     </defs>
   </svg>
 
-  <!-- 标题栏 -->
   <header id="title-bar">
-    <span class="app-title">cYy Music</span>
+    <span class="app-title"><svg class="app-logo" aria-hidden="true"><use href="#i-cyy-logo"/></svg>cYy Music</span>
     <div class="window-controls">
       <button class="win-btn" id="btn-min"><svg class="ic"><use href="#i-min"/></svg></button>
       <button class="win-btn" id="btn-max"><svg class="ic"><use href="#i-max"/></svg></button>
@@ -98,14 +103,20 @@
     </div>
   </header>
 
-  <!-- 主体 -->
+  <div id="backend-error-banner" class="backend-error-banner" style="display:none;">
+    <svg class="ic"><use href="#i-info"/></svg>
+    <span id="backend-error-msg"></span>
+    <button id="backend-retry-btn" class="banner-btn">重试</button>
+    <button id="backend-error-close" class="banner-close" title="关闭">×</button>
+  </div>
+
   <div id="app-body">
-    <!-- 侧边栏 -->
     <aside id="sidebar">
       <div class="logo">A great Day starts with Music</div>
       <nav>
         <a class="nav-item active" data-view="search"><svg class="ic"><use href="#i-search"/></svg> 搜索</a>
         <a class="nav-item" data-view="playlist"><svg class="ic"><use href="#i-list"/></svg> 我的歌单</a>
+        <a class="nav-item" data-view="library"><svg class="ic"><use href="#i-hdd"/></svg> 聆听本地</a>
         <a class="nav-item" data-view="downloads"><svg class="ic"><use href="#i-download"/></svg> 下载管理</a>
         <a class="nav-item" id="nav-settings"><svg class="ic"><use href="#i-settings"/></svg> 设置</a>
         <a class="nav-item" id="nav-about"><svg class="ic"><use href="#i-info"/></svg> 关于</a>
@@ -115,9 +126,7 @@
       </div>
     </aside>
 
-    <!-- 主内容区 -->
     <main id="main-content">
-      <!-- 搜索视图 -->
       <section id="view-search" class="view active">
         <div class="view-header">
           <h1>搜索音乐</h1>
@@ -137,18 +146,25 @@
           <button id="clear-results-btn" class="btn-ghost"><svg class="ic"><use href="#i-trash"/></svg> 清空结果</button>
           <button id="cancel-all-btn" class="btn-danger"><svg class="ic"><use href="#i-x"/></svg> 取消下载</button>
         </div>
-        <!-- 搜索/解析进度（musicdl 进度输出实时显示） -->
+        <div id="search-selection-bar" class="selection-bar" style="display:none;">
+          <span class="selection-info">已选 <b id="search-selected-count">0</b> 项</span>
+          <button id="search-select-all-btn" class="btn-secondary" type="button">全选</button>
+          <button id="search-invert-btn" class="btn-secondary" type="button">反选</button>
+          <button id="search-clear-sel-btn" class="btn-ghost" type="button">取消选择</button>
+        </div>
         <div id="search-progress" class="search-progress" style="display:none;"></div>
-        <div class="view-body split">
+        <div class="view-body">
           <div id="result-list" class="list-panel"></div>
-          <div id="lyric-content" class="lyric-panel"><div class="lyric-empty">暂无歌词</div></div>
         </div>
       </section>
 
-      <!-- 歌单视图 -->
       <section id="view-playlist" class="view">
         <div class="view-header">
           <h1>我的歌单 <span id="playlist-count">0</span></h1>
+          <div class="playlist-switcher">
+            <button class="playlist-tab active" data-type="online" type="button">在线</button>
+            <button class="playlist-tab" data-type="local" type="button">本地</button>
+          </div>
           <div class="playlist-tools">
             <button id="btn-save-playlist" class="mini-btn" title="保存歌单"><svg class="ic"><use href="#i-save"/></svg></button>
             <button id="btn-load-playlist" class="mini-btn" title="加载歌单"><svg class="ic"><use href="#i-folder"/></svg></button>
@@ -158,7 +174,71 @@
         <div id="playlist-content" class="playlist-full"><div class="empty-tip">列表为空</div></div>
       </section>
 
-      <!-- 下载视图 -->
+      <section id="view-library" class="view">
+        <div class="view-header">
+          <h1>聆听本地 <span id="library-count">0</span></h1>
+          <div class="library-tools">
+            <!-- 第 1 行：视图选项（编码 / 排序 / 格式 / 封面） -->
+            <div class="library-tools-row">
+              <label class="library-inline-label">编码</label>
+              <select id="library-encoding-select" class="library-select"></select>
+
+              <label class="library-inline-label">排序</label>
+              <select id="library-sort-select" class="library-select">
+                <option value="filename">文件名</option>
+                <option value="song_name">标题</option>
+                <option value="singers">艺术家</option>
+                <option value="album">专辑</option>
+                <option value="duration">时长</option>
+                <option value="size">大小</option>
+                <option value="mtime">修改时间</option>
+              </select>
+              <button id="library-sort-dir-btn" class="mini-btn" title="切换升/降序">↑</button>
+
+              <select id="library-filter-ext" class="library-select">
+                <option value="">全部格式</option>
+              </select>
+
+              <label class="inline-checkbox library-cover-filter">
+                <input type="checkbox" id="library-cover-only" /> 仅含封面
+              </label>
+            </div>
+
+            <!-- 第 2 行：筛选 + 目录操作 -->
+            <div class="library-tools-row">
+              <label class="library-inline-label">歌手</label>
+              <select id="library-filter-singer" class="library-select" style="max-width:130px;">
+                <option value="">全部</option>
+              </select>
+
+              <label class="library-inline-label">专辑</label>
+              <select id="library-filter-album" class="library-select" style="max-width:150px;">
+                <option value="">全部</option>
+              </select>
+
+              <button id="library-toggle-btn" class="btn-secondary" title="切换下载目录 / 自定义目录">
+                <svg class="ic"><use href="#i-folder"/></svg> <span id="library-dir-label">下载目录</span>
+              </button>
+              <button id="library-custom-btn" class="mini-btn" title="设置自定义目录"><svg class="ic"><use href="#i-settings"/></svg></button>
+              <button id="library-rescan-btn" class="mini-btn" title="重新扫描"><svg class="ic"><use href="#i-refresh"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <div id="library-selection-bar" class="selection-bar" style="display:none;">
+          <span class="selection-info">已选 <b id="library-selected-count">0</b> 项</span>
+          <button id="library-select-all-btn" class="btn-secondary" type="button">全选</button>
+          <button id="library-invert-btn" class="btn-secondary" type="button">反选</button>
+          <button id="library-rename-btn" class="btn-secondary" type="button"><svg class="ic"><use href="#i-save"/></svg> 批量重命名</button>
+          <button id="library-tags-btn" class="btn-accent" type="button"><svg class="ic"><use href="#i-settings"/></svg> 编辑标签</button>
+          <button id="library-convert-btn" class="btn-secondary" type="button"><svg class="ic"><use href="#i-refresh"/></svg> 批量转换</button>
+          <button id="library-trash-btn" class="btn-danger" type="button"><svg class="ic"><use href="#i-trash"/></svg> 移到回收站</button>
+          <button id="library-clear-sel-btn" class="btn-ghost" type="button">取消选择</button>
+        </div>
+
+        <div id="library-content" class="library-full"></div>
+      </section>
+
       <section id="view-downloads" class="view">
         <div class="view-header"><h1>下载管理</h1></div>
         <div id="download-area" class="download-full">
@@ -169,10 +249,24 @@
           </div>
         </div>
       </section>
+
+      <!-- 全局歌词面板：绝对定位在主内容右侧，左边缘可拖动调整宽度 -->
+      <aside id="lyric-panel" class="lyric-panel">
+        <div class="lyric-resize-handle" id="lyric-resize-handle" title="拖动调整宽度，双击恢复默认" aria-hidden="true"></div>
+        <div id="lyric-content" class="lyric-body">
+          <div class="lyric-empty">暂无歌词</div>
+        </div>
+      </aside>
+
+      <!-- 歌词折叠按钮：绝对定位，跟随面板 -->
+      <button id="lyric-toggle-btn" class="lyric-toggle" type="button" title="收起歌词" aria-label="收起歌词">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
     </main>
   </div>
 
-  <!-- 底部播放条 -->
   <footer id="player-bar">
     <div class="now-playing">
       <div id="player-cover" class="cover"><svg class="ic"><use href="#i-music"/></svg></div>
@@ -200,15 +294,28 @@
         <option value="2" selected>列表循环</option>
         <option value="3">列表暂停</option>
       </select>
+      <select id="speed-select" title="播放速度">
+        <option value="0.5">0.5×</option>
+        <option value="0.75">0.75×</option>
+        <option value="1" selected>1.0×</option>
+        <option value="1.25">1.25×</option>
+        <option value="1.5">1.5×</option>
+        <option value="1.75">1.75×</option>
+        <option value="2">2.0×</option>
+      </select>
       <button class="player-ctrl eq" id="btn-eq" title="均衡器"><svg class="ic"><use href="#i-eq"/></svg></button>
       <button class="player-ctrl viz" id="btn-viz" title="可视化"><svg class="ic"><use href="#i-viz"/></svg></button>
+      <button class="player-ctrl sleep" id="btn-sleep-timer" title="睡眠定时器"><svg class="ic"><use href="#i-moon"/></svg></button>
+      <span id="sleep-timer-remaining" class="sleep-remaining"></span>
+      <button class="player-ctrl" id="btn-mini" title="迷你播放器"><svg class="ic"><use href="#i-pip"/></svg></button>
     </div>
     <div id="label-codec" class="codec-badge">MP3</div>
   </footer>
 
+  <div id="sleep-timer-menu" class="sleep-menu"></div>
+
   <audio id="audio-player" preload="auto" style="display:none;"></audio>
 
-  <!-- 设置弹窗 -->
   <div class="modal-mask" id="settings-modal">
     <div class="modal-box settings-box">
       <div class="modal-header">
@@ -222,6 +329,8 @@
             <button type="button" class="settings-tab" data-tab="tab-download">下载</button>
             <button type="button" class="settings-tab" data-tab="tab-appearance">外观</button>
             <button type="button" class="settings-tab" data-tab="tab-playback">播放</button>
+            <button type="button" class="settings-tab" data-tab="tab-remote">手机遥控</button>
+            <button type="button" class="settings-tab" data-tab="tab-diagnostics">诊断</button>
           </div>
           <div class="settings-content">
             <div class="tab-page active" id="tab-sources">
@@ -326,7 +435,19 @@
                 <div class="form-group">
                   <label>详细进度</label>
                   <div>
-                    <label class="inline-checkbox"><input type="checkbox" id="setting-show-progress" checked /> 显示搜索/解析详细进度（关闭则恢复正常控制台输出）</label>
+                    <label class="inline-checkbox"><input type="checkbox" id="setting-show-progress" checked /> 显示搜索/解析进度</label>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>智能封面</label>
+                  <div>
+                    <label class="inline-checkbox"><input type="checkbox" id="setting-smart-cover" checked /> 无封面歌曲生成封面</label>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>动态主题</label>
+                  <div>
+                    <label class="inline-checkbox"><input type="checkbox" id="setting-dynamic-theme" checked /> 根据封面生成主题色</label>
                   </div>
                 </div>
               </div>
@@ -342,6 +463,81 @@
                 </select>
               </div>
             </div>
+            <div class="tab-page" id="tab-remote">
+              <div class="form-group">
+                <label>手机遥控 / 投送</label>
+                <div>
+                  <label class="inline-checkbox">
+                    <input type="checkbox" id="setting-remote-enabled" /> 启用局域网遥控
+                  </label>
+                </div>
+                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:6px;line-height:1.6;">
+                  启用后，同一局域网内的手机可扫码或访问下方链接控制播放。
+                  <b>请勿在不可信网络中开启</b>。
+                </div>
+              </div>
+              <div class="form-group" id="remote-url-group" style="display:none;">
+                <label>手机扫码访问</label>
+                <div class="remote-qr-wrap">
+                  <img id="remote-qrcode" alt="扫码连接遥控" />
+                  <div class="remote-qr-empty" id="remote-qr-empty">二维码加载中…</div>
+                </div>
+                <label>访问地址</label>
+                <div style="display:flex;gap:8px;align-items:stretch;">
+                  <input type="text" id="setting-remote-url" readonly
+                         style="flex:1;font-family:Consolas,monospace;font-size:12px;" />
+                  <button type="button" class="btn-secondary" id="btn-copy-remote-url">复制</button>
+                </div>
+                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:6px;">
+                  在线遥控端：<b id="remote-connected-count">0</b>
+                </div>
+              </div>
+              <div class="form-group" id="remote-actions-group" style="display:none;">
+                <label>操作</label>
+                <div style="display:flex;gap:8px;">
+                  <button type="button" class="btn-secondary" id="btn-rotate-remote-token">重置 Token</button>
+                  <button type="button" class="btn-danger" id="btn-disable-remote">关闭遥控</button>
+                </div>
+                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:6px;">
+                  重置 Token 会立即踢掉所有已连接的手机；关闭遥控会撤销所有权限。
+                </div>
+              </div>
+            </div>
+            <div class="tab-page" id="tab-diagnostics">
+              <div class="form-group">
+                <label>诊断信息</label>
+                <div class="diagnostics-actions">
+                  <button type="button" id="diag-refresh-btn" class="btn-secondary">查看诊断信息</button>
+                  <button type="button" id="diag-export-btn" class="btn-primary">导出诊断包</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>设置管理</label>
+                <div class="diagnostics-actions">
+                  <button type="button" id="settings-export-btn" class="btn-secondary">导出设置</button>
+                  <button type="button" id="settings-import-btn" class="btn-secondary">导入设置</button>
+                </div>
+                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:8px;line-height:1.6;">
+                  <b>导出</b>：把当前所有设置（搜索源、下载选项、主题、EQ 等）保存为 JSON 文件。<br />
+                  <b>导入</b>：从 JSON 文件恢复设置，会覆盖现有设置并立即生效。
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>重置</label>
+                <div class="diagnostics-actions">
+                  <button type="button" id="settings-reset-backend-btn" class="btn-danger">重置后端设置</button>
+                  <button type="button" id="settings-reset-frontend-btn" class="btn-danger">重置前端设置</button>
+                </div>
+                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:8px;line-height:1.6;">
+                  <b>重置后端</b>：把 config.json 恢复默认值（搜索源、下载、主题、EQ 等全部重置）。<br />
+                  <b>重置前端</b>：清除本地界面状态（歌词面板折叠、窗口位置等），并重新加载界面。
+                </div>
+              </div>
+
+              <pre id="diag-output" class="diag-output" style="display:none;"></pre>
+            </div>
           </div>
         </div>
         <div class="modal-actions">
@@ -352,7 +548,6 @@
     </div>
   </div>
 
-  <!-- 均衡器弹窗 -->
   <div class="modal-mask" id="eq-modal">
     <div class="modal-box eq-box">
       <div class="modal-header">
@@ -368,15 +563,29 @@
           <option value="classical">古典</option>
           <option value="vocal">人声</option>
           <option value="bass">重低音</option>
+          <option value="cYy">cYy特调😍</option>
           <option value="custom">自定义</option>
         </select>
         <button type="button" class="btn-ghost" id="eq-reset">重置</button>
+        <button type="button" class="btn-ghost" id="eq-preset-save" title="将当前配置保存为预设">保存</button>
+        <button type="button" class="btn-ghost" id="eq-preset-import" title="从 JSON 文件导入预设">导入</button>
+        <button type="button" class="btn-ghost" id="eq-preset-export" title="导出当前预设为 JSON">导出</button>
+        <button type="button" class="btn-ghost" id="eq-preset-delete" title="删除当前自定义预设">删除</button>
       </div>
       <div class="eq-bands" id="eq-bands"></div>
       <div class="eq-effects">
         <button type="button" class="eq-chip" id="eq-chip-bass">低音增强</button>
         <button type="button" class="eq-chip" id="eq-chip-treble">高音增强</button>
         <button type="button" class="eq-chip" id="eq-chip-vocal">人声增强</button>
+        <button type="button" class="eq-chip" id="eq-chip-vocal-cancel" title="中置声道反相消除；对单声道源无效">人声消除</button>
+      </div>
+      <div class="eq-vocal-cancel-panel" id="eq-vocal-cancel-panel">
+        <div class="eq-vc-row">
+          <label for="eq-vocal-cancel-amount">消除强度</label>
+          <input type="range" id="eq-vocal-cancel-amount" min="0" max="100" step="1" value="100" />
+          <span id="eq-vocal-cancel-amount-label">100%</span>
+        </div>
+        <div class="eq-vc-hint" id="eq-vocal-cancel-hint"></div>
       </div>
       <div class="modal-actions">
         <button type="button" class="cancel-btn" id="eq-done-btn">完成</button>
@@ -384,7 +593,57 @@
     </div>
   </div>
 
-  <!-- 关于弹窗 -->
+  <div class="modal-mask" id="rename-modal">
+    <div class="modal-box" style="max-width:640px;">
+      <div class="modal-header">
+        <h2>批量重命名</h2>
+        <button class="modal-close" id="rename-close-btn"><svg class="ic"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="form-group">
+        <label>命名模板（支持变量：{歌手} {歌曲名} {专辑} {年份} {音轨} {原名}）</label>
+        <input type="text" id="rename-pattern" placeholder="{歌手}-{歌曲名}" />
+      </div>
+      <div class="rename-preview-wrap">
+        <table class="rename-preview">
+          <thead><tr><th>原名</th><th>新名</th></tr></thead>
+          <tbody id="rename-preview-body"></tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="cancel-btn" id="rename-cancel-btn">取消</button>
+        <button type="button" class="save-btn" id="rename-apply-btn">重命名</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="tags-modal">
+    <div class="modal-box" style="max-width:560px;">
+      <div class="modal-header">
+        <h2>批量编辑标签 <span id="tags-count-hint" style="font-weight:400;font-size:13px;color:var(--color-text-secondary);"></span></h2>
+        <button class="modal-close" id="tags-close-btn"><svg class="ic"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="form-group">
+        <div class="tags-edit-grid">
+          <label>标题<input type="text" id="tags-title" placeholder="留空不修改" /></label>
+          <label>艺术家<input type="text" id="tags-artist" placeholder="留空不修改" /></label>
+          <label>专辑<input type="text" id="tags-album" placeholder="留空不修改" /></label>
+          <label>年份<input type="text" id="tags-year" placeholder="留空不修改" /></label>
+          <label>流派<input type="text" id="tags-genre" placeholder="留空不修改" /></label>
+          <label>音轨号<input type="text" id="tags-track" placeholder="留空不修改" /></label>
+          <label>碟片号<input type="text" id="tags-disc" placeholder="留空不修改" /></label>
+        </div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:8px;">
+          只写入非空字段。<b>清空字段请勾选下方"清空所选字段"。</b>
+        </div>
+        <div class="tags-clear-row" id="tags-clear-row"></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="cancel-btn" id="tags-cancel-btn">取消</button>
+        <button type="button" class="save-btn" id="tags-apply-btn">写入标签</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-mask" id="about-modal">
     <div class="modal-box" style="width:400px;">
       <div class="modal-header">
@@ -393,9 +652,49 @@
       </div>
       <div style="line-height:2.0; font-size:14px; color:var(--color-text-secondary);">
         基于 FastAPI + musicdl + Electron<br />
-        版本 5.2.0<br />
+        版本 8.4.0<br />
         本程序遵循 GNU 3.0 开源协议<br />
         © 2026 cYy
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量格式转换弹窗 -->
+  <div class="modal-mask" id="batch-convert-modal">
+    <div class="modal-box" style="max-width:480px;">
+      <div class="modal-header">
+        <h2>批量转换格式 <span id="batch-convert-summary" style="font-weight:400;font-size:13px;color:var(--color-text-secondary);"></span></h2>
+        <button class="modal-close" id="batch-convert-close-btn"><svg class="ic"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="form-group">
+        <label>目标格式</label>
+        <select id="batch-convert-format">
+          <option value="mp3">MP3</option>
+          <option value="aac">AAC</option>
+          <option value="ogg">OGG</option>
+          <option value="flac">FLAC</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>码率</label>
+        <select id="batch-convert-bitrate"></select>
+      </div>
+      <div class="form-group">
+        <label>处理方式</label>
+        <div>
+          <label class="inline-checkbox">
+            <input type="radio" name="batch-convert-mode" value="keep" checked /> 保留原文件（新文件放同目录）
+          </label>
+        </div>
+        <div>
+          <label class="inline-checkbox">
+            <input type="radio" name="batch-convert-mode" value="replace" /> 转换成功后删除原文件
+          </label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="cancel-btn" id="batch-convert-cancel-btn">取消</button>
+        <button type="button" class="save-btn" id="batch-convert-apply-btn">开始转换</button>
       </div>
     </div>
   </div>
@@ -420,8 +719,17 @@
       </div>
     </div>
     <div id="viz-controls">
-      <button class="player-ctrl" id="viz-btn-play"><svg class="ic"><use href="#i-play"/></svg></button>
-      <button class="player-ctrl secondary" id="viz-btn-stop"><svg class="ic"><use href="#i-stop"/></svg></button>
+      <button class="player-ctrl" id="viz-btn-prev" title="上一首"><svg class="ic"><use href="#i-prev"/></svg></button>
+      <button class="player-ctrl primary" id="viz-btn-play" title="播放/暂停"><svg class="ic"><use href="#i-play"/></svg></button>
+      <button class="player-ctrl" id="viz-btn-next" title="下一首"><svg class="ic"><use href="#i-next"/></svg></button>
+      <button class="player-ctrl secondary" id="viz-btn-stop" title="停止"><svg class="ic"><use href="#i-stop"/></svg></button>
+      <select id="viz-playmode-select" title="播放模式">
+        <option value="0">单曲循环</option>
+        <option value="1">单曲暂停</option>
+        <option value="2" selected>列表循环</option>
+        <option value="3">列表暂停</option>
+      </select>
+      <button class="player-ctrl" id="viz-btn-playlist" title="播放列表"><svg class="ic"><use href="#i-list"/></svg></button>
       <div class="progress-col">
         <input type="range" id="viz-position-slider" min="0" max="0" value="0" step="0.1" />
       </div>
@@ -432,8 +740,59 @@
         <input type="range" id="viz-volume-slider" min="0" max="100" value="60" />
       </div>
     </div>
+    <div id="viz-playlist-panel">
+      <div class="vpl-header">
+        <span>播放列表 <span id="viz-playlist-count">0</span></span>
+        <button class="vpl-close" id="viz-playlist-close" title="关闭"><svg class="ic"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="vpl-list" id="viz-playlist-list"></div>
+    </div>
   </div>
 
+  <!-- 全屏歌词覆盖层 -->
+  <div id="lyrics-overlay">
+    <div id="lyrics-overlay-bg"></div>
+    <div id="lyrics-overlay-title-bar">
+      <span class="ly-title" id="lyrics-overlay-title">cYy Music · 歌词</span>
+      <button class="title-btn" id="lyrics-overlay-min"><svg class="ic"><use href="#i-min"/></svg></button>
+      <button class="title-btn" id="lyrics-overlay-max"><svg class="ic"><use href="#i-max"/></svg></button>
+      <button class="title-btn" id="lyrics-overlay-close"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div id="lyrics-overlay-main">
+      <div id="lyrics-overlay-cover-wrap">
+        <div id="lyrics-overlay-cover" class="no-cover"></div>
+      </div>
+      <div id="lyrics-overlay-lines">
+        <div class="lyric-empty">暂无歌词</div>
+      </div>
+    </div>
+    <div id="lyrics-overlay-controls">
+      <button class="player-ctrl" id="lyrics-overlay-prev" title="上一首"><svg class="ic"><use href="#i-prev"/></svg></button>
+      <button class="player-ctrl primary" id="lyrics-overlay-play" title="播放/暂停"><svg class="ic"><use href="#i-play"/></svg></button>
+      <button class="player-ctrl" id="lyrics-overlay-next" title="下一首"><svg class="ic"><use href="#i-next"/></svg></button>
+      <button class="player-ctrl secondary" id="lyrics-overlay-stop" title="停止"><svg class="ic"><use href="#i-stop"/></svg></button>
+      <span id="lyrics-overlay-time">00:00 / 00:00</span>
+    </div>
+  </div>
+
+  <!-- ===== 脚本（顺序敏感，勿调换） ===== -->
+  <script src="js/core.js"></script>
+  <script src="js/lrc.js"></script>
+  <script src="js/cover-gen.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/dynamic-theme.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/selection.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/browse.js"></script>
+  <script src="js/download.js"></script>
+  <script src="js/full-lyrics.js"></script>
+  <script src="js/eq-viz.js"></script>
+  <script src="js/sleep-timer.js"></script>
+  <script src="js/shortcuts.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/library.js"></script>
+  <script src="effects.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

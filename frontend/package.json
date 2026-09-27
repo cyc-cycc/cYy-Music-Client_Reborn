@@ -1,14 +1,17 @@
 {
   "name": "cYy_music_client-Reborn",
-  "version": "5.2.0",
-  "description": "cYy Music Client - HTML 前端 + FastAPI 后端",
+  "version": "8.4.0",
+  "description": "cYy Music Client - Reborn - HTML 前端 + FastAPI 后端",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win",
     "dist:portable": "electron-builder --win portable",
     "dist:nsis": "electron-builder --win nsis",
-    "dist:dir": "electron-builder --win dir"
+    "dist:dir": "electron-builder --win dir",
+    "dist:mac": "electron-builder --mac",
+    "dist:mac:dmg": "electron-builder --mac dmg",
+    "dist:mac:zip": "electron-builder --mac zip"
   },
   "keywords": [],
   "author": "cYy",
@@ -16,14 +19,21 @@
   "type": "commonjs",
   "build": {
     "appId": "com.cyy.musicclient",
-    "productName": "cYy Music Client",
+    "productName": "cYy Music Client - Reborn",
     "asar": true,
     "files": [
       "main.js",
       "index.html",
       "renderer.js",
+      "effects.js",
       "style.css",
-      "package.json"
+      "enhanced.css",
+      "mini.html",
+      "mini-renderer.js",
+      "desktop-lyric.html",
+      "desktop-lyric-renderer.js",
+      "package.json",
+      "js/**/*"
     ],
     "extraResources": [
       {
@@ -53,6 +63,16 @@
             "x64"
           ]
         }
+      ],
+      "extraResources": [
+        {
+          "from": "../dist/cyy_backend",
+          "to": "backend"
+        },
+        {
+          "from": "../ffmpeg.exe",
+          "to": "backend/ffmpeg.exe"
+        }
       ]
     },
     "nsis": {
@@ -61,10 +81,46 @@
       "perMachine": false
     },
     "portable": {
-      "artifactName": "cYy-Music-Client-${version}-portable.exe"
+      "artifactName": "cYy-Music-Client-Reborn-${version}-portable.exe"
     },
     "directories": {
       "output": "../dist-app"
+    },
+    "mac": {
+      "icon": "../gui/icon.icns",
+      "category": "public.app-category.music",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "extraResources": [
+        {
+          "from": "../dist/cyy_backend",
+          "to": "backend"
+        },
+        {
+          "from": "../ffmpeg",
+          "to": "backend/ffmpeg"
+        }
+      ]
+    },
+    "dmg": {
+      "title": "cYy Music Client - Reborn ${version}",
+      "artifactName": "cYy-Music-Client-Reborn-${version}-${arch}.dmg"
     }
   },
   "devDependencies": {
